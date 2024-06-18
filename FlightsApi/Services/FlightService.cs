@@ -53,7 +53,7 @@ namespace FlightsApi.Services
             return airport;
         }
 
-        public async Task<bool> ValidateAirplaneAsync(Aircraft plane) => await GetAirplaneAsync(plane.Rab) != null;
+        public async Task<bool> ValidateAirplaneAsync(string rab) => await GetAirplaneAsync(rab) != null;
 
         public async Task<bool> UpdateAirplaneLastFlightAsync(Aircraft plane)
         {
@@ -73,6 +73,6 @@ namespace FlightsApi.Services
             }
         }
 
-        public async Task<bool> ValidateAirportAsync(Airport airport) => await GetAirportAsync(airport._id) != null;
+        public async Task<bool> ValidateAirportAsync(string airportId) => await GetAirportAsync(airportId) != null;
     }
 }
