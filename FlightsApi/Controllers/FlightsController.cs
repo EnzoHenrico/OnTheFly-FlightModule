@@ -8,6 +8,7 @@ using FlightsApi.Data;
 using FlightsApi.Services;
 using Models;
 using NuGet.Protocol.Core.Types;
+using Models.DTO;
 
 namespace FlightsApi.Controllers
 {
@@ -82,20 +83,28 @@ namespace FlightsApi.Controllers
 
         // POST: Flights/Add
         [HttpPost("Add")]
-        public async Task<ActionResult<Flight>> Create(Flight flight)
+        public async Task<ActionResult<Flight>> Create(FlightDTO dto)
         {
-            if (_context.Flight == null)
-            {
-                return Problem("Entity set 'FlightsApiContext.Flights' is null.");
-            }
+            if (_context.Flight == null || dto == null)
+                return Problem("Null context or input.");
 
-            if (!await _flightService.ValidateAirplaneAsync(flight.Plane))
+            if (!await _flightService.ValidateAirplaneAsync(dto.PlaneRab))
                 return Problem("Invalid aircraft.");
             
-            else if (!await _flightService.ValidateAirportAsync(flight.Arrival))
+            else if (!await _flightService.ValidateAirportAsync(dto.ArrivalIata))
                 return Problem("Invalid arrival.");
 
-            else if (!await _flightService.UpdateAirplaneLastFlightAsync(flight.Plane))
+            Flight flight = new Flight
+            {
+                FlightNumber = dto.FlightNumber,
+                Arrival = await _flightService.GetAirportAsync(dto.ArrivalIata),
+                Plane = await _flightService.GetAirplaneAsync(dto.PlaneRab),
+                Sales = dto.Sales,
+                Status = dto.Status,
+                Schedule = dto.Schedule
+            };
+
+            if (!await _flightService.UpdateAirplaneLastFlightAsync(flight.Plane))
                 return Problem("Failed to update aircraft last flight.");
 
             _context.Flight.Add(flight);
