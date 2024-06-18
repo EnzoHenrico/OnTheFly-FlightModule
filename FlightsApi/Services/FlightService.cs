@@ -9,26 +9,31 @@ namespace FlightsApi.Services
         private readonly string _Aircraft = "https://localhost:0000/api/Aircraft/";
         private readonly string _Airport = "https://localhost:0000/api/Airport/";
 
-        private async Task<bool> GetAirplaneAsync(string rab)
+        private async Task<Aircraft?> GetAirplaneAsync(string rab)
         {
+            Aircraft? aircraft = null;
             string url = _Aircraft + rab;
-         
+            
             try
             {
                 using HttpClient client = new HttpClient();
 
                 HttpResponseMessage response = await client.GetAsync(url);
 
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync();
+                    aircraft = JsonConvert.DeserializeObject<Aircraft>(json);
+                }
             }
-            catch (Exception)
-            {
-                return false;
-            }
+            catch (Exception) { }
+
+            return aircraft;
         }
 
-        private async Task<bool> GetAirportAsync(string id)
+        private async Task<Airport?> GetAirportAsync(string id)
         {
+            Airport? airport = null;
             string url = _Airport + id;
 
             try
@@ -37,17 +42,20 @@ namespace FlightsApi.Services
 
                 HttpResponseMessage response = await client.GetAsync(url);
 
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync();
+                    airport = JsonConvert.DeserializeObject<Airport>(json);
+                }
             }
-            catch (Exception)
-            {
-                return false;
-            }
+            catch (Exception) { }
+
+            return airport;
         }
 
-        public async Task<bool> ValidateAirplane(Aircraft plane) => await GetAirplaneAsync(plane.Rab);
+        public async Task<bool> ValidateAirplaneAsync(Aircraft plane) => await GetAirplaneAsync(plane.Rab) != null;
 
-        public async Task<bool> UpdateAirplane(Aircraft plane)
+        public async Task<bool> UpdateAirplaneLastFlightAsync(Aircraft plane)
         {
             string url = _Aircraft + plane.Rab;
 
@@ -65,6 +73,6 @@ namespace FlightsApi.Services
             }
         }
 
-        public async Task<bool> ValidateAirport(Airport airport) => await GetAirportAsync(airport._id);
+        public async Task<bool> ValidateAirportAsync(Airport airport) => await GetAirportAsync(airport._id) != null;
     }
 }
