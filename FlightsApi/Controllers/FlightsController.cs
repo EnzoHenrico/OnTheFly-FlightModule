@@ -89,6 +89,15 @@ namespace FlightsApi.Controllers
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
 
+            if (!await _flightService.ValidateAirplaneAsync(flight.Plane))
+                return Problem("Invalid aircraft.");
+            
+            else if (!await _flightService.ValidateAirportAsync(flight.Arrival))
+                return Problem("Invalid arrival.");
+
+            else if (!await _flightService.UpdateAirplaneLastFlightAsync(flight.Plane))
+                return Problem("Failed to update aircraft last flight.");
+
             _context.Flight.Add(flight);
             await _context.SaveChangesAsync();
 
