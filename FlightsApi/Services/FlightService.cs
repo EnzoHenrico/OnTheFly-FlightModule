@@ -9,7 +9,7 @@ namespace FlightsApi.Services
         private readonly string _Aircraft = "https://localhost:0000/api/Aircraft/";
         private readonly string _Airport = "https://localhost:0000/api/Airport/";
 
-        private async Task<Aircraft?> GetAirplaneAsync(string rab)
+        public async Task<Aircraft?> GetAirplaneAsync(string rab)
         {
             Aircraft? aircraft = null;
             string url = _Aircraft + rab;
@@ -31,7 +31,7 @@ namespace FlightsApi.Services
             return aircraft;
         }
 
-        private async Task<Airport?> GetAirportAsync(string id)
+        public async Task<Airport?> GetAirportAsync(string id)
         {
             Airport? airport = null;
             string url = _Airport + id;
