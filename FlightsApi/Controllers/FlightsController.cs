@@ -8,6 +8,7 @@ using FlightsApi.Data;
 using FlightsApi.Services;
 using Models;
 using NuGet.Protocol.Core.Types;
+using Models.DTO;
 
 namespace FlightsApi.Controllers
 {
@@ -26,7 +27,7 @@ namespace FlightsApi.Controllers
 
         // GET: Flights
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Flight>>> GetAll()
+        public async Task<ActionResult<IEnumerable<FlightDTO>>> GetAll()
         {
             if (_context.Flight == null)
             {
@@ -35,12 +36,18 @@ namespace FlightsApi.Controllers
 
             var flights = await _context.Flight.ToListAsync();
 
-            return flights;
+            List<FlightDTO> result = new List<FlightDTO>();
+            foreach(Flight flight in flights)
+            {
+                result.Add(new FlightDTO(flight));
+            }
+
+            return result;
         }
 
         // GET: Flights/5
         [HttpGet("{flightNumber}")]
-        public async Task<ActionResult<Flight>> GetOne(int? flighNumber)
+        public async Task<ActionResult<FlightDTO>> GetOne(int? flighNumber)
         {
             if (_context.Flight == null)
             {
@@ -58,13 +65,13 @@ namespace FlightsApi.Controllers
                 return NotFound();
             }
 
-            return flight;
+            return new FlightDTO(flight);
         }
 
         // Função de retornar apenas voos ativos, implementação secundária!!
         // GET: Flights/Actives
         [HttpGet("{flightNumber}")]
-        public async Task<ActionResult<IEnumerable<Flight>>> GetAllActives()
+        public async Task<ActionResult<IEnumerable<FlightDTO>>> GetAllActives()
         {
             if (_context.Flight == null)
             {
@@ -77,7 +84,13 @@ namespace FlightsApi.Controllers
                 return NotFound();
             }
 
-            return flights;
+            List<FlightDTO> result = new List<FlightDTO>();
+            foreach (Flight flight in flights)
+            {
+                result.Add(new FlightDTO(flight));
+            }
+
+            return result;
         }
 
         // POST: Flights/Add
