@@ -159,30 +159,43 @@ namespace FlightsApi.Controllers
             {
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
-
-            if (id == null)
+            bool _opCheck;
+            if(operation != "Cancel" && operation != "Sell")
             {
-                return NotFound("Unavaliable Id");
+                _opCheck = false;
+            }
+            else
+            {
+                _opCheck = true;
+            }
+            if (id == null || newSeats < 0 || _opCheck != true)
+            {
+                return NotFound("Unavaliable Id, Operation or Seat Numbers");
             }
 
-            var flight = await _context.Flight.Where(p => p.FlightNumber == id).Include(a => a.Plane).Include(c => c.Plane.Company).Include(c => c.Plane.Company.Address).Include(b => b.Arrival).FirstOrDefaultAsync();
-
-
-            /*
-             
-                var blog1 = context.Blogs
-                       .Where(b => b.Name == "ADO.NET Blog")
-                       .Include(b => b.Posts)
-                       .FirstOrDefault();
-            */
-
+            var flight = await _context.Flight.Where(p => p.FlightNumber == id)
+                .Include(a => a.Plane).Include(c => c.Plane.Company)
+                .Include(c => c.Plane.Company.Address).Include(b => b.Arrival).FirstOrDefaultAsync();
+           
             if (flight == null)
             {
                 return NotFound("The flight doesn't exists");
             }
 
+            bool? _notBlocked = flight.Plane.Company.Status;
+
+            if (_notBlocked == false)
+            {
+                return BadRequest($"Blockd Company Transition, try to contact {flight.Plane.Company.Name}");
+            }
+
+            if (flight.Status == false)
+            {
+                return BadRequest($"The Flight isn't avaliable for some reason, try /ChangeStatus/{id}");
+            }
+
             // Checking the avaliable seats
-            int _num;
+            int _num = 0;
             if(operation == "Cancel")
             {
                 _num = -(newSeats ?? 0);
@@ -190,34 +203,28 @@ namespace FlightsApi.Controllers
             {
                 _num = (newSeats ?? 0);
             }
-            else
-            {
-                return NotFound("Invalid Operation, try these options:\n\tCancel\n\tSell");
-            }
-            bool? _notBlocked = flight.Plane.Company.Status;
-            if (_notBlocked == false)
-            {
-                return NotFound($"Blockd Company Transition, try to contact {flight.Plane.Company.Name}");
-            }
-            //if(flight.Status == false)
-            //{
-            //    return BadRequest("All seats are already sold up");
-            //}
             int _maxCapacity = flight.Plane.Capacity;
             int _currentCapacity = flight.Sales;
             int _newCapacity = _currentCapacity + _num;
+            int _avaliableSeats = _maxCapacity - _newCapacity;
 
+            if (_currentCapacity == _maxCapacity && operation != "Cancel")
+            {
+                // For automatic changes of status when check out of capacity
+                //if(flight.Status = true)
+                //{
+                //    flight.Status = !flight.Status;
+                //}
+                return BadRequest("There isn't an avaliable passage to buy");
+            }
             if (_newCapacity <= _maxCapacity)
             {
                 flight.Sales = _newCapacity;
-                if(_newCapacity == _maxCapacity)
-                {
-                    flight.Status = !flight.Status;
-                }
-            }
-            else
-            {
-                return BadRequest($"There isn't avaliable flights to the selected destiny");
+                // For automatic changes of status when fullfill the capacity
+                //if (_newCapacity == _maxCapacity)
+                //{
+                //    flight.Status = !flight.Status;
+                //}
             }
 
             // Updating changes
@@ -237,8 +244,7 @@ namespace FlightsApi.Controllers
                     throw;
                 }
             }
-
-            return Ok($"{operation} on id {id} concluded");
+            return Ok($"{operation} on id {id} concluded for {newSeats} passages\nThere is {_avaliableSeats} avaliable seats to sell");
         }
 
         private bool FlightExists(int id)
