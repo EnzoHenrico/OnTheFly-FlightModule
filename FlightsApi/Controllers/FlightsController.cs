@@ -90,7 +90,7 @@ namespace FlightsApi.Controllers
 
             if (!await _flightService.ValidateAirplaneAsync(dto.PlaneRab))
                 return Problem("Invalid aircraft.");
-            
+
             else if (!await _flightService.ValidateAirportAsync(dto.ArrivalIata))
                 return Problem("Invalid arrival.");
 
@@ -104,7 +104,10 @@ namespace FlightsApi.Controllers
                 Schedule = dto.Schedule
             };
 
-            if (!await _flightService.UpdateAirplaneLastFlightAsync(flight.Plane))
+            flight.Plane.LastFlightDate = flight.Schedule;
+            flight.Plane.Capacity -= flight.Sales;
+
+            if (!await _flightService.UpdateAirplaneAsync(flight.Plane))
                 return Problem("Failed to update aircraft last flight.");
 
             _context.Flight.Add(flight);
