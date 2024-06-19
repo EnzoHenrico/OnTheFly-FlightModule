@@ -8,6 +8,7 @@ using FlightsApi.Data;
 using FlightsApi.Services;
 using Models;
 using NuGet.Protocol.Core.Types;
+using Models.DTO;
 
 namespace FlightsApi.Controllers
 {
@@ -26,58 +27,97 @@ namespace FlightsApi.Controllers
 
         // GET: Flights
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Flight>>> GetAll()
+        public async Task<ActionResult<IEnumerable<FlightDTO>>> GetAll()
         {
             if (_context.Flight == null)
             {
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
 
-            var flights = await _context.Flight.ToListAsync();
+            List<Flight> flights = await _context.Flight.Include(a => a.Arrival).Include(a => a.Plane).ToListAsync();
+            List<FlightDTO> flightsDTO = new List<FlightDTO>();
 
-            return flights;
+            foreach (var flight in flights)
+            {
+                var flightDTO = new FlightDTO();
+                flightDTO.FlightNumber = flight.FlightNumber;
+                flightDTO.ArrivalIata = flight.Arrival.Iata;
+                flightDTO.PlaneRab = flight.Plane.Rab;
+                flightDTO.Sales = flight.Sales ;
+                flightDTO.Status = flight.Status;
+                flightDTO.Schedule = flight.Schedule;
+
+                flightsDTO.Add(flightDTO);
+            }
+            
+            return flightsDTO;
         }
 
         // GET: Flights/5
         [HttpGet("{flightNumber}")]
-        public async Task<ActionResult<Flight>> GetOne(int? flighNumber)
+        public async Task<ActionResult<FlightDTO>> GetOne(int? flightNumber)
         {
             if (_context.Flight == null)
             {
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
 
-            if (flighNumber == null)
+            if (flightNumber == null)
             {
                 return NotFound();
             }
 
-            var flight = await _context.Flight.FirstOrDefaultAsync(flight => flight.FlightNumber == flighNumber);
+            Flight? flight = await _context.Flight.Include(a => a.Arrival).Include(a => a.Plane).FirstOrDefaultAsync(flight => flight.FlightNumber == flightNumber);
+
+            var flightDTO = new FlightDTO();
+            flightDTO.FlightNumber = flight.FlightNumber;
+            flightDTO.ArrivalIata = flight.Arrival.Iata;
+            flightDTO.PlaneRab = flight.Plane.Rab;
+            flightDTO.Sales = flight.Sales;
+            flightDTO.Status = flight.Status;
+            flightDTO.Schedule = flight.Schedule;        
+
+
             if (flight == null)
             {
                 return NotFound();
             }
 
-            return flight;
+            return flightDTO;
         }
 
         // Função de retornar apenas voos ativos, implementação secundária!!
         // GET: Flights/Actives
-        [HttpGet("{flightNumber}")]
-        public async Task<ActionResult<IEnumerable<Flight>>> GetAllActives()
+        [HttpGet("Actives")]
+        public async Task<ActionResult<IEnumerable<FlightDTO>>> GetAllActives()
         {
             if (_context.Flight == null)
             {
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
 
-            var flights = await _context.Flight.Where(flight => flight.Status == true).ToListAsync();
+            List<Flight> flights = await _context.Flight.Include(a => a.Arrival).Include(a => a.Plane).Where(flight => flight.Status == true).ToListAsync();
+            List<FlightDTO> flightsDTO = new List<FlightDTO>();
+
+            foreach (var flight in flights)
+            {
+                var flightDTO = new FlightDTO();
+                flightDTO.FlightNumber = flight.FlightNumber;
+                flightDTO.ArrivalIata = flight.Arrival.Iata;
+                flightDTO.PlaneRab = flight.Plane.Rab;
+                flightDTO.Sales = flight.Sales;
+                flightDTO.Status = flight.Status;
+                flightDTO.Schedule = flight.Schedule;
+
+                flightsDTO.Add(flightDTO);
+            }
+
             if (flights == null)
             {
                 return NotFound();
             }
 
-            return flights;
+            return flightsDTO;
         }
 
         // POST: Flights/Add
