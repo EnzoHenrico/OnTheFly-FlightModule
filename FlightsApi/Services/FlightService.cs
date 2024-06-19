@@ -1,19 +1,21 @@
 ﻿using Models;
+using Models.DTO;
 using Newtonsoft.Json;
-using System.Numerics;
+using System.Text;
 
 namespace FlightsApi.Services
 {
     public class FlightService
     {
-        private readonly string _Aircraft = "https://localhost:0000/api/Aircraft/";
-        private readonly string _Airport = "https://localhost:0000/api/Airport/";
+        private readonly string _Aircraft = "https://localhost:7051/api/AirCrafts/";
+        private readonly string _Airport = "https://localhost:44366/Airport/";
+        private readonly string _Company = "https://localhost:7269/api/Companies/";
 
-        public async Task<Aircraft?> GetAirplaneAsync(string rab)
+        public async Task<Company?> GetCompanyAsync(string cnpj)
         {
-            Aircraft? aircraft = null;
-            string url = _Aircraft + rab;
-            
+            Company? company = null;
+            string url = _Company + cnpj;
+
             try
             {
                 using HttpClient client = new HttpClient();
@@ -23,12 +25,63 @@ namespace FlightsApi.Services
                 if (response.IsSuccessStatusCode)
                 {
                     string json = await response.Content.ReadAsStringAsync();
-                    aircraft = JsonConvert.DeserializeObject<Aircraft>(json);
+
+                    company = JsonConvert.DeserializeObject<Company>(json);
                 }
             }
-            catch (Exception) { }
+            catch (Exception e) { Console.WriteLine(e); }
 
-            return aircraft;
+            return company;
+        }
+
+        public async Task<Aircraft?> GetAirplaneAsync(string rab)
+        {
+            Aircraft? plane = null;
+            string url = _Aircraft + rab;
+
+            try
+            {
+                using HttpClient client = new HttpClient();
+
+                HttpResponseMessage response = await client.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync();
+
+                    if (json == null)
+                        return plane;
+
+                    AircraftDTO? dto = JsonConvert.DeserializeObject<AircraftDTO>(json);
+
+                    if (dto != null)
+                    {
+                        var company = GetCompanyAsync(dto.Company).Result;
+
+                        if (company == null)
+                        {
+                            company = new Company { Cnpj = dto.Company, Name = "Not Founded", NameOpt = " ", OpeningDate = DateTime.Now, Status = true };
+
+                            company.Address = new Address { City = " ", State = " ", Street = " ", ZipCode = " ", Complement = " ", Number = 1 };
+                        }
+
+                        plane = new Aircraft
+                        {
+                            Rab = dto.Rab,
+                            Capacity = dto.Capacity,
+                            RegistryDate = dto.RegistryDate,
+                            LastFlightDate = dto.LastFlightDate,
+                            Company = company
+                        };
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return plane;
         }
 
         public async Task<Airport?> GetAirportAsync(string id)
@@ -50,20 +103,31 @@ namespace FlightsApi.Services
             }
             catch (Exception) { }
 
+            airport.State = " ";
+
             return airport;
         }
 
         public async Task<bool> ValidateAirplaneAsync(string rab) => await GetAirplaneAsync(rab) != null;
 
-        public async Task<bool> UpdateAirplaneLastFlightAsync(Aircraft plane)
+        public async Task<bool> UpdateAirplaneAsync(Aircraft plane)
         {
-            string url = _Aircraft + plane.Rab;
+            string url = _Aircraft;
+
+            AircraftDTO aircraftDTO = new AircraftDTO
+            {
+                Rab = plane.Rab,
+                Capacity = plane.Capacity,
+                RegistryDate = plane.RegistryDate,
+                LastFlightDate = plane.LastFlightDate,
+                Company = plane.Company.Cnpj
+            };
 
             try
             {
                 using HttpClient client = new HttpClient();
 
-                HttpResponseMessage response = await client.PutAsync(url, new StringContent(JsonConvert.SerializeObject(plane)));
+                HttpResponseMessage response = await client.PutAsync(url, new StringContent(JsonConvert.SerializeObject(aircraftDTO), Encoding.UTF8, "application/json"));
 
                 return response.IsSuccessStatusCode;
             }
