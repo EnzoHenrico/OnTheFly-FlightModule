@@ -160,13 +160,20 @@ namespace FlightsApi.Controllers
                 return Problem("Entity set 'FlightsApiContext.Flights' is null.");
             }
             bool _opCheck;
-            if(operation != "Cancel" && operation != "Sell")
+            int _num = 0;
+            switch (operation)
             {
-                _opCheck = false;
-            }
-            else
-            {
-                _opCheck = true;
+                case "Cancel":
+                    _num = (newSeats ?? 0);
+                    _opCheck = true;
+                    break;
+                case "Sell":
+                    _num = -(newSeats ?? 0);
+                    _opCheck = true;
+                    break;
+                default:
+                    _opCheck = false;
+                    break;
             }
             if (id == null || newSeats < 0 || _opCheck != true)
             {
@@ -195,20 +202,11 @@ namespace FlightsApi.Controllers
             }
 
             // Checking the avaliable seats
-            int _num = 0;
-            if(operation == "Cancel")
-            {
-                _num = -(newSeats ?? 0);
-            }else if(operation == "Sell")
-            {
-                _num = (newSeats ?? 0);
-            }
             int _maxCapacity = flight.Plane.Capacity;
-            int _currentCapacity = flight.Sales;
-            int _newCapacity = _currentCapacity + _num;
-            int _avaliableSeats = _maxCapacity - _newCapacity;
+            int _soldReservedCapacity = flight.Sales;
+            int _avaliableSeats = _soldReservedCapacity + _num;
 
-            if (_currentCapacity == _maxCapacity && operation != "Cancel")
+            if (_soldReservedCapacity == 0 && operation != "Cancel")
             {
                 // For automatic changes of status when check out of capacity
                 //if(flight.Status = true)
@@ -217,9 +215,9 @@ namespace FlightsApi.Controllers
                 //}
                 return BadRequest("There isn't an avaliable passage to buy");
             }
-            if (_newCapacity <= _maxCapacity)
+            if (_avaliableSeats <= _maxCapacity)
             {
-                flight.Sales = _newCapacity;
+                flight.Sales = _avaliableSeats;
                 // For automatic changes of status when fullfill the capacity
                 //if (_newCapacity == _maxCapacity)
                 //{
