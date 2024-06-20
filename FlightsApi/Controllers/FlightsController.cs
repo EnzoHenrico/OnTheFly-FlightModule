@@ -122,12 +122,32 @@ namespace FlightsApi.Controllers
 
         // POST: Flights/Add
         [HttpPost("Add")]
-        public async Task<ActionResult<Flight>> Create(Flight flight)
+        public async Task<ActionResult<Flight>> Create(FlightDTO dto)
         {
-            if (_context.Flight == null)
+            if (_context.Flight == null || dto == null)
+                return Problem("Null context or input.");
+
+            if (!await _flightService.ValidateAirplaneAsync(dto.PlaneRab))
+                return Problem("Invalid aircraft.");
+
+            else if (!await _flightService.ValidateAirportAsync(dto.ArrivalIata))
+                return Problem("Invalid arrival.");
+
+            Flight flight = new Flight
             {
-                return Problem("Entity set 'FlightsApiContext.Flights' is null.");
-            }
+                FlightNumber = dto.FlightNumber,
+                Arrival = await _flightService.GetAirportAsync(dto.ArrivalIata),
+                Plane = await _flightService.GetAirplaneAsync(dto.PlaneRab),
+                Sales = dto.Sales,
+                Status = dto.Status,
+                Schedule = dto.Schedule
+            };
+
+            flight.Plane.LastFlightDate = flight.Schedule;
+            flight.Plane.Capacity -= flight.Sales;
+
+            if (!await _flightService.UpdateAirplaneAsync(flight.Plane))
+                return Problem("Failed to update aircraft last flight.");
 
             _context.Flight.Add(flight);
             await _context.SaveChangesAsync();

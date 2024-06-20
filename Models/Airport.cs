@@ -15,6 +15,6 @@ namespace Models
         [JsonProperty("iata")] public string Iata { get; set; }
         [JsonProperty("state")] public string State { get; set; }
         [JsonProperty("city")] public string City { get; set; }
-        [JsonProperty("country")] public string Country { get; set; }
+        [JsonProperty("country_id")] public string Country { get; set; }
     }
 }
