@@ -15,5 +15,20 @@ namespace Models.DTO
         [JsonProperty("sales")] public int Sales { get; set; }
         [JsonProperty("status")] public bool Status { get; set; }
         [JsonProperty("schedule")] public DateTime Schedule { get; set; }
+
+        public FlightDTO()
+        {
+            
+        }
+
+        public FlightDTO(Flight flight)
+        {
+            FlightNumber = flight.FlightNumber;
+            ArrivalIata = flight.Arrival.Iata;
+            PlaneRab = flight.Plane.Rab;
+            Sales = flight.Sales;
+            Status = flight.Status;
+            Schedule = flight.Schedule;
+        }
     }
 }

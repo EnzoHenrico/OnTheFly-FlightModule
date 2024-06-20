@@ -55,6 +55,7 @@ namespace FlightsApi.Controllers
 
         // GET: Flights/5
         [HttpGet("{flightNumber}")]
+
         public async Task<ActionResult<FlightDTO>> GetOne(int? flightNumber)
         {
             if (_context.Flight == null)
@@ -82,12 +83,12 @@ namespace FlightsApi.Controllers
             {
                 return NotFound();
             }
-
             return flightDTO;
         }
 
         // Função de retornar apenas voos ativos, implementação secundária!!
         // GET: Flights/Actives
+
         [HttpGet("Actives")]
         public async Task<ActionResult<IEnumerable<FlightDTO>>> GetAllActives()
         {
@@ -116,7 +117,6 @@ namespace FlightsApi.Controllers
             {
                 return NotFound();
             }
-
             return flightsDTO;
         }
 
@@ -155,9 +155,9 @@ namespace FlightsApi.Controllers
             return CreatedAtAction("GetOne", new { flightNumber = flight.FlightNumber }, flight);
         }
 
-        // PATCH: Flights/ChangeStatus/5
-        [HttpPatch("Activate/{id}/{status}")]
-        public async Task<ActionResult> PatchStatus(int? id, bool status)
+        // PATCH: /ChangeStatus/1
+        [HttpPatch("ChangeStatus/{id}")]
+        public async Task<ActionResult> PatchStatus(int? id)
         {
             if (_context.Flight == null)
             {
@@ -175,9 +175,123 @@ namespace FlightsApi.Controllers
                 return NotFound();
             }
 
-            flight.Status = status;
+            flight.Status = !flight.Status;
+
+            try
+            {
+                _context.Flight.Update(flight);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!FlightExists(flight.FlightNumber))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
             return NoContent();
+        }
+
+        // PATCH: /CheckSeats/1/Sell/1
+        // Cancel is for decrementation and Sell is for sold seats
+        [HttpPatch("CheckSeats/{id}/{operation}/{newSeats}")]
+        public async Task<ActionResult> PatchSeats(int? id, string? operation, int? newSeats)
+        {
+            if (_context.Flight == null)
+            {
+                return Problem("Entity set 'FlightsApiContext.Flights' is null.");
+            }
+            bool _opCheck;
+            if(operation != "Cancel" && operation != "Sell")
+            {
+                _opCheck = false;
+            }
+            else
+            {
+                _opCheck = true;
+            }
+            if (id == null || newSeats < 0 || _opCheck != true)
+            {
+                return NotFound("Unavaliable Id, Operation or Seat Numbers");
+            }
+
+            var flight = await _context.Flight.Where(p => p.FlightNumber == id)
+                .Include(a => a.Plane).Include(c => c.Plane.Company)
+                .Include(c => c.Plane.Company.Address).Include(b => b.Arrival).FirstOrDefaultAsync();
+           
+            if (flight == null)
+            {
+                return NotFound("The flight doesn't exists");
+            }
+
+            bool? _notBlocked = flight.Plane.Company.Status;
+
+            if (_notBlocked == false)
+            {
+                return BadRequest($"Blockd Company Transition, try to contact {flight.Plane.Company.Name}");
+            }
+
+            if (flight.Status == false)
+            {
+                return BadRequest($"The Flight isn't avaliable for some reason, try /ChangeStatus/{id}");
+            }
+
+            // Checking the avaliable seats
+            int _num = 0;
+            if(operation == "Cancel")
+            {
+                _num = -(newSeats ?? 0);
+            }else if(operation == "Sell")
+            {
+                _num = (newSeats ?? 0);
+            }
+            int _maxCapacity = flight.Plane.Capacity;
+            int _currentCapacity = flight.Sales;
+            int _newCapacity = _currentCapacity + _num;
+            int _avaliableSeats = _maxCapacity - _newCapacity;
+
+            if (_currentCapacity == _maxCapacity && operation != "Cancel")
+            {
+                // For automatic changes of status when check out of capacity
+                //if(flight.Status = true)
+                //{
+                //    flight.Status = !flight.Status;
+                //}
+                return BadRequest("There isn't an avaliable passage to buy");
+            }
+            if (_newCapacity <= _maxCapacity)
+            {
+                flight.Sales = _newCapacity;
+                // For automatic changes of status when fullfill the capacity
+                //if (_newCapacity == _maxCapacity)
+                //{
+                //    flight.Status = !flight.Status;
+                //}
+            }
+
+            // Updating changes
+            try
+            {
+                _context.Flight.Update(flight);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!FlightExists(flight.FlightNumber))
+                {
+                    return NotFound("The flight doesn't existis");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return Ok($"{operation} on id {id} concluded for {newSeats} passages\nThere is {_avaliableSeats} avaliable seats to sell");
         }
 
         private bool FlightExists(int id)
